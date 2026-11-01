@@ -15,7 +15,7 @@ builder.Services.AddControllers();
 
 // 2. Регистрация DbContext (для примера InMemory; заменим на SQL Server при необходимости)
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseInMemoryDatabase("AuthDb"));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // 3. Регистрация репозиториев и сервисов (Dependency Injection)
 builder.Services.AddScoped<IUserRepository, UserRepository>();
