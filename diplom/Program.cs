@@ -26,7 +26,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // 3. Регистрация репозиториев и сервисов (Dependency Injection)
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
-builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IEmailService, EmailService>(); 
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 // 4. Настройка JWT Аутентификации
