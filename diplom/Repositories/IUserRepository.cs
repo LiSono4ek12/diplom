@@ -1,4 +1,4 @@
-﻿using Api.Entities;
+﻿using diplom.Models;
 
 namespace Api.Repositories;
 

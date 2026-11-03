@@ -1,8 +1,8 @@
 ﻿using System.Security.Claims;
 using System.Security.Cryptography;
 using Api.DTOs;
-using Api.Entities;
 using Api.Repositories;
+using diplom.Models;
 
 namespace Api.Services;
 

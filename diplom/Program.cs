@@ -1,6 +1,6 @@
-using Api.Data;
 using Api.Repositories;
 using Api.Services;
+using diplom.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -57,26 +57,24 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Account Web API", Version = "v1" });
-
-    // Кнопка Authorize в Swagger UI
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
-        Description = "Введите JWT токен. Пример: Bearer {ваш_токен}",
         Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Вставьте JWT токен"
     });
 
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
     {
         {
-            new OpenApiSecurityScheme
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
             {
-                Reference = new OpenApiReference
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
                 {
-                    Type = ReferenceType.SecurityScheme,
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
                     Id = "Bearer"
                 }
             },

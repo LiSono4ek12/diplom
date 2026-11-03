@@ -1,5 +1,5 @@
-﻿using Api.Data;
-using Api.Entities;
+﻿using diplom.Data;
+using diplom.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Repositories;

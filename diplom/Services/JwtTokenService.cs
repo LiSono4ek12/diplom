@@ -2,7 +2,7 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using Api.Entities;
+using diplom.Models;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Api.Services;
