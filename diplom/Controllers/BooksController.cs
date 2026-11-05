@@ -19,20 +19,51 @@ public class BooksController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<BookDto>>> GetBooks([FromQuery] int? categoryId, [FromQuery] int? authorId)
+    public async Task<ActionResult<object>> GetBooks(
+        [FromQuery] int? categoryId,
+        [FromQuery] int? authorId,
+        [FromQuery] string? searchTerm,
+        [FromQuery] string? sortBy, // "price_asc", "price_desc", "title"
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
     {
         var query = _context.Books
             .Include(b => b.Category)
             .Include(b => b.Author)
             .AsQueryable();
 
+        // Фильтрация по категории
         if (categoryId.HasValue)
             query = query.Where(b => b.CategoryId == categoryId.Value);
 
+        // Фильтрация по автору
         if (authorId.HasValue)
             query = query.Where(b => b.AuthorId == authorId.Value);
 
-        return await query
+        // Поиск по названию, описанию или имени/фамилии автора
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.ToLower();
+            query = query.Where(b =>
+                b.Title.ToLower().Contains(term) ||
+                b.Description.ToLower().Contains(term) ||
+                (b.Author != null && (b.Author.FirstName.ToLower().Contains(term) || b.Author.LastName.ToLower().Contains(term))));
+        }
+
+        // Сортировка
+        query = sortBy?.ToLower() switch
+        {
+            "price_asc" => query.OrderBy(b => b.Price),
+            "price_desc" => query.OrderByDescending(b => b.Price),
+            "title" => query.OrderBy(b => b.Title),
+            _ => query.OrderByDescending(b => b.Id)
+        };
+
+        // Пагинация
+        var totalItems = await query.CountAsync();
+        var books = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(b => new BookDto
             {
                 Id = b.Id,
@@ -47,6 +78,15 @@ public class BooksController : ControllerBase
                 AuthorFullName = b.Author != null ? $"{b.Author.FirstName} {b.Author.LastName}" : string.Empty
             })
             .ToListAsync();
+
+        return Ok(new
+        {
+            TotalItems = totalItems,
+            Page = page,
+            PageSize = pageSize,
+            TotalPages = (int)Math.Ceiling((double)totalItems / pageSize),
+            Items = books
+        });
     }
 
     [HttpGet("{id}")]

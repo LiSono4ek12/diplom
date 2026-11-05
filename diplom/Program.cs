@@ -4,7 +4,6 @@ using diplom.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
 using Microsoft.OpenApi.Models;
 using System.Text;
 
@@ -13,23 +12,38 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Регистрация контроллеров
 builder.Services.AddControllers();
 
-// 2. Регистрация DbContext (для примера InMemory; заменим на SQL Server при необходимости)
+// 2. Настройка базы данных Azure SQL с повторными попытками подключения (Retry policy)
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection"),
-        sqlOptions => sqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 5,
-            maxRetryDelay: TimeSpan.FromSeconds(10),
-            errorNumbersToAdd: null)
+        sqlOptions =>
+        {
+            sqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(10),
+                errorNumbersToAdd: null);
+            sqlOptions.CommandTimeout(60);
+        }
     ));
 
-// 3. Регистрация репозиториев и сервисов (Dependency Injection)
+// 3. Настройка CORS (чтобы фронтенд мог отправлять запросы без блокировок браузера)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
+// 4. Регистрация сервисов и репозиториев (Dependency Injection)
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
-builder.Services.AddScoped<IEmailService, EmailService>(); 
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
-// 4. Настройка JWT Аутентификации
+// 5. Настройка JWT Аутентификации
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["Secret"]!;
 
@@ -53,28 +67,28 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// 5. Настройка Swagger с поддержкой кнопки Authorize (Bearer token)
+// 6. Настройка Swagger с кнопкой Authorize (Bearer Token)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Type = SecuritySchemeType.Http,
         Scheme = "Bearer",
         BearerFormat = "JWT",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        In = ParameterLocation.Header,
         Description = "Вставьте JWT токен"
     });
 
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            new OpenApiSecurityScheme
             {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                Reference = new OpenApiReference
                 {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Type = ReferenceType.SecurityScheme,
                     Id = "Bearer"
                 }
             },
@@ -85,7 +99,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Настройка HTTP pipeline
+// Настройка Middleware Pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -94,9 +108,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Важно соблюдать порядок: сначала Authentication, затем Authorization!
-app.UseAuthentication();
-app.UseAuthorization();
+// Важно соблюдать порядок подключения Middleware:
+app.UseCors("AllowFrontend");   // 1. Разрешаем Cross-Origin запросы
+app.UseAuthentication();        // 2. Аутентифицируем по токену
+app.UseAuthorization();         // 3. Проверяем права доступа
 
 app.MapControllers();
 
